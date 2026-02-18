@@ -88,7 +88,9 @@ def register_tools(mcp: FastMCP, store: DataStore) -> None:
                 le = LabelEncoder()
                 non_null = df[col].dropna()
                 le.fit(non_null.astype(str))
-                df.loc[non_null.index, col] = le.transform(non_null.astype(str))
+                encoded = le.transform(non_null.astype(str))
+                df[col] = pd.array([pd.NA] * len(df), dtype=pd.Int64Dtype())
+                df.loc[non_null.index, col] = encoded
                 mappings[col] = dict(zip(le.classes_, range(len(le.classes_))))
 
             store.set(name, df)

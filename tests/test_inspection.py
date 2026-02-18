@@ -1,81 +1,106 @@
-"""Test script for Phase 2 — Inspection tools.
-Run: python tests/test_inspection.py
-"""
-import sys
-from pathlib import Path
-
-# Ensure src is importable
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
+"""Tests for inspection tools (inspection.py)."""
+import pytest
+from mcp.server.fastmcp import FastMCP
 
 from mcp_data_science.state import DataStore
 from mcp_data_science.tools import inspection
-
-# ── Setup ───────────────────────────────────────────────────────────────
-from mcp.server.fastmcp import FastMCP
-
-mcp = FastMCP("test")
-store = DataStore()
-inspection.register_tools(mcp, store)
-
-# Grab inner tool functions from the MCP registry
-tools = mcp._tool_manager._tools
+from conftest import ToolCaller
 
 
-def call(tool_name: str, **kwargs) -> str:
-    """Call a registered MCP tool by name (sync wrapper)."""
-    import asyncio
-    ctx = None  # inspection tools don't use ctx
-    result = asyncio.run(tools[tool_name].run(kwargs))
-    return result
+@pytest.fixture
+def env(sample_df):
+    mcp = FastMCP("test")
+    store = DataStore()
+    store.add("test", sample_df.copy())
+    inspection.register_tools(mcp, store)
+    return store, ToolCaller(mcp)
 
 
-# ── Load test CSV ───────────────────────────────────────────────────────
-from mcp_data_science.tools import loading
-loading.register_tools(mcp, store)
+class TestGetHead:
+    def test_default(self, env):
+        _, call = env
+        result = call("get_head")
+        assert "Alice" in result
 
-csv_path = str(Path(__file__).resolve().parent / "sample_data.csv")
-print("=" * 70)
-print("LOADING CSV")
-print("=" * 70)
-print(call("load_csv", file_path=csv_path))
+    def test_custom_n(self, env):
+        _, call = env
+        result = call("get_head", n=2)
+        assert "Alice" in result and "Bob" in result
 
-# ── Test each inspection tool ───────────────────────────────────────────
-tests = [
-    ("get_head", {}),
-    ("get_tail", {"n": 3}),
-    ("get_info", {}),
-    ("get_statistics", {}),
-    ("get_shape", {}),
-    ("quality_report", {}),
-    ("get_unique_values", {"column": "Category"}),
-    ("get_column_profile", {"column": "Revenue"}),
-    ("get_column_profile", {"column": "City"}),
-    ("sample_data", {"n": 4}),
-]
 
-passed = 0
-failed = 0
+class TestGetTail:
+    def test_default(self, env):
+        _, call = env
+        result = call("get_tail")
+        assert "Jack" in result
 
-for tool_name, kwargs in tests:
-    print()
-    print("=" * 70)
-    label = f"{tool_name}({', '.join(f'{k}={v!r}' for k, v in kwargs.items())})"
-    print(f"TEST: {label}")
-    print("=" * 70)
-    try:
-        result = call(tool_name, **kwargs)
-        if isinstance(result, str) and result.startswith("Error"):
-            print(f"  FAIL: {result}")
-            failed += 1
-        else:
-            # For string results, print them; for other types just confirm
-            print(str(result)[:500])
-            passed += 1
-    except Exception as e:
-        print(f"  EXCEPTION: {type(e).__name__} - {e}")
-        failed += 1
+    def test_custom_n(self, env):
+        _, call = env
+        result = call("get_tail", n=2)
+        assert "Jack" in result
 
-print()
-print("=" * 70)
-print(f"RESULTS: {passed} passed, {failed} failed out of {passed + failed} tests")
-print("=" * 70)
+
+class TestGetInfo:
+    def test_happy(self, env):
+        _, call = env
+        result = call("get_info")
+        assert "Name" in result
+        assert "non-null" in result.lower() or "Non-Null" in result
+
+
+class TestGetStatistics:
+    def test_happy(self, env):
+        _, call = env
+        result = call("get_statistics")
+        assert "mean" in result.lower() or "count" in result.lower()
+
+
+class TestGetShape:
+    def test_happy(self, env):
+        _, call = env
+        result = call("get_shape")
+        assert "12" in result and "6" in result
+
+
+class TestQualityReport:
+    def test_happy(self, env):
+        _, call = env
+        result = call("quality_report")
+        assert "Missing" in result or "missing" in result
+        assert "Duplicate" in result or "duplicate" in result
+
+
+class TestGetUniqueValues:
+    def test_happy(self, env):
+        _, call = env
+        result = call("get_unique_values", column="Category")
+        assert "A" in result and "B" in result and "C" in result
+
+    def test_missing_column(self, env):
+        _, call = env
+        result = call("get_unique_values", column="ZZZ")
+        assert "Error" in str(result) or "error" in str(result).lower()
+
+
+class TestGetColumnProfile:
+    def test_numeric(self, env):
+        _, call = env
+        result = call("get_column_profile", column="Revenue")
+        assert "mean" in result.lower() or "min" in result.lower()
+
+    def test_string(self, env):
+        _, call = env
+        result = call("get_column_profile", column="City")
+        assert "Paris" in result or "unique" in result.lower()
+
+    def test_missing_column(self, env):
+        _, call = env
+        result = call("get_column_profile", column="ZZZ")
+        assert "Error" in str(result) or "error" in str(result).lower()
+
+
+class TestSampleData:
+    def test_default(self, env):
+        _, call = env
+        result = call("sample_data", n=4)
+        assert isinstance(result, str) and len(result) > 10

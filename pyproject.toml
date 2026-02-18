@@ -20,8 +20,14 @@ dependencies = [
     "Pillow>=10.0.0",
 ]
 
+[project.optional-dependencies]
+test = ["pytest>=7.0.0"]
+
 [project.scripts]
 mcp-data-science = "mcp_data_science:main"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/mcp_data_science"]
