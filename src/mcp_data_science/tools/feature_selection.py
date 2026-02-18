@@ -16,6 +16,7 @@ def register_tools(mcp: FastMCP, store: DataStore) -> None:
     ) -> str:
         """Identify features with correlation to target below threshold.
         Returns list of low-importance columns with their correlation values. Does NOT auto-drop.
+        Non-destructive: identifies low-correlation features but does NOT drop them. Review results before using drop_low_importance.
         Example: correlation_filter(target_column="Revenue", threshold=0.05, method="pearson")"""
         try:
             name = store.resolve_name(df_name)
@@ -66,6 +67,7 @@ def register_tools(mcp: FastMCP, store: DataStore) -> None:
     def variance_filter(threshold: float = 0.0, df_name: str = "") -> str:
         """Identify columns with variance at or below threshold (constant/near-constant).
         Returns list of low-variance columns. Does NOT auto-drop.
+        Non-destructive: identifies constant/near-constant columns. These provide no useful information for modeling.
         Example: variance_filter(threshold=0.01)"""
         try:
             name = store.resolve_name(df_name)
@@ -113,6 +115,7 @@ def register_tools(mcp: FastMCP, store: DataStore) -> None:
         """Compute feature importance using tree-based model or mutual information.
         Methods: 'random_forest', 'mutual_info_classif', 'mutual_info_regression'.
         Returns ranked list of features with importance scores.
+        Run after all encoding and feature engineering. Ranks features by predictive power. Helps focus modeling on most important features.
         Example: feature_importance(target_column="Revenue", method="random_forest", top_n=20)"""
         try:
             name = store.resolve_name(df_name)
@@ -170,6 +173,7 @@ def register_tools(mcp: FastMCP, store: DataStore) -> None:
         """Drop columns below a computed importance threshold.
         Methods: 'variance' (drop cols with variance <= threshold),
                  'correlation' (drop cols with abs correlation to target <= threshold).
+        Destructive: actually drops columns. Use AFTER reviewing results from correlation_filter or variance_filter.
         Example: drop_low_importance(target_column="Revenue", method="correlation", threshold=0.05)"""
         try:
             name = store.resolve_name(df_name)

@@ -19,6 +19,7 @@ def register_tools(mcp: FastMCP, store: DataStore) -> None:
     ) -> str:
         """Split dataframe into train/test sets. Stores them as '{name}_train' and '{name}_test'.
         stratify=True preserves target class proportions (classification only).
+        Run BEFORE training any model. Always use fixed random_state for reproducibility. Use stratify=True for imbalanced classification datasets.
         Example: train_test_split(target_column="Revenue", test_size=0.2)"""
         try:
             from sklearn.model_selection import train_test_split as sklearn_split
@@ -56,6 +57,7 @@ def register_tools(mcp: FastMCP, store: DataStore) -> None:
     ) -> str:
         """Train a model. Types: 'linear_regression', 'logistic_regression', 'random_forest',
         'gradient_boosting', 'decision_tree'. The model is stored for later predict/evaluate.
+        Start with simple model (linear/logistic) as baseline. Only move to complex models (random_forest, gradient_boosting) if baseline is insufficient. Uses ALL numeric columns as features.
         Example: train_model(target_column="Revenue", model_type="random_forest")"""
         try:
             name = store.resolve_name(train_df_name)
@@ -124,6 +126,7 @@ def register_tools(mcp: FastMCP, store: DataStore) -> None:
         df_name: str = "",
     ) -> str:
         """Generate predictions on a dataframe using a stored model. Stores predictions as a new column.
+        Generate predictions on new data. The dataframe must contain the same feature columns used during training.
         Example: predict(model_name="random_forest_data_train", df_name="data_test")"""
         try:
             models = store.list_model_names()
@@ -167,6 +170,7 @@ def register_tools(mcp: FastMCP, store: DataStore) -> None:
     ) -> str:
         """Evaluate a model on test data. Returns classification metrics (accuracy, precision, recall, F1,
         confusion matrix) or regression metrics (MAE, MSE, RMSE, R²).
+        Always evaluate on TEST set, never training set. Compare metrics against baseline. Test score much worse than training = overfitting.
         Example: evaluate_model(model_name="random_forest_data_train", test_df_name="data_test")"""
         try:
             models = store.list_model_names()
@@ -230,7 +234,8 @@ def register_tools(mcp: FastMCP, store: DataStore) -> None:
 
     @mcp.tool()
     def list_models() -> str:
-        """List all trained models with their type and training metadata."""
+        """List all trained models with their type and training metadata.
+        Check which models have been trained and their training scores before deciding next steps."""
         names = store.list_model_names()
         if not names:
             return "No models trained."

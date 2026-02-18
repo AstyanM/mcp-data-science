@@ -14,6 +14,7 @@ def register_tools(mcp: FastMCP, store: DataStore) -> None:
     ) -> str:
         """Extract datetime components as new columns ({column}_year, {column}_month, etc.).
         Parts: year, month, day, dayofweek, hour, minute, weekofyear, quarter, is_weekend.
+        Use early in feature engineering when datetime columns exist. year, month, dayofweek, is_weekend are often highly predictive. Original column is preserved.
         Example: extract_datetime_parts(column="date", parts=["year", "month", "dayofweek", "is_weekend"])"""
         try:
             name = store.resolve_name(df_name)
@@ -69,6 +70,7 @@ def register_tools(mcp: FastMCP, store: DataStore) -> None:
     ) -> str:
         """Compute time difference between two datetime columns (column_a - column_b).
         Units: days, hours, minutes, seconds. Creates a new numeric column.
+        Create duration features between two dates (e.g., delivery time, age, tenure). Result is a numeric column ready for modeling.
         Example: datetime_diff(column_a="end_date", column_b="start_date", new_column="duration_days", unit="days")"""
         try:
             name = store.resolve_name(df_name)
@@ -114,6 +116,7 @@ def register_tools(mcp: FastMCP, store: DataStore) -> None:
     ) -> str:
         """Filter rows by datetime range. Start/end as ISO strings (e.g., '2024-01-01').
         Leave start or end empty for open-ended range.
+        Subset data to a specific time period. WARNING: modifies in-place. Use copy_dataframe first if you need the full date range later.
         Example: datetime_filter(column="date", start="2024-01-01", end="2024-06-30")"""
         try:
             name = store.resolve_name(df_name)
@@ -142,7 +145,8 @@ def register_tools(mcp: FastMCP, store: DataStore) -> None:
 
     @mcp.tool()
     def set_datetime_index(column: str, df_name: str = "") -> str:
-        """Set a datetime column as the DataFrame index. Useful before time-series operations.
+        """Set a datetime column as the DataFrame index.
+        Set datetime column as DataFrame index. Required for time-series resampling. Sorts by index automatically.
         Example: set_datetime_index(column="date")"""
         try:
             name = store.resolve_name(df_name)

@@ -14,6 +14,7 @@ def register_tools(mcp: FastMCP, store: DataStore) -> None:
     ) -> str:
         """Remove duplicate rows. subset: columns to check (None = all).
         keep: 'first', 'last', or 'none' (drop all duplicates).
+        Run early in pipeline, right after EDA. Duplicates inflate statistics and bias models.
         Example: drop_duplicates(subset=["col1","col2"], keep="first")"""
         try:
             name = store.resolve_name(df_name)
@@ -31,6 +32,7 @@ def register_tools(mcp: FastMCP, store: DataStore) -> None:
     @mcp.tool()
     def drop_columns(columns: list[str], df_name: str = "") -> str:
         """Drop specified columns from the dataframe.
+        Remove useless columns (constants, IDs, leaked features). Always understand a column before dropping it.
         Example: drop_columns(columns=["col1","col2"])"""
         try:
             name = store.resolve_name(df_name)
@@ -52,6 +54,7 @@ def register_tools(mcp: FastMCP, store: DataStore) -> None:
     ) -> str:
         """Drop rows with missing values. how: 'any' (any null) or 'all' (all null).
         subset: limit check to specific columns (None = all).
+        Use when entire rows are invalid. For partial missingness, prefer fill_missing instead.
         Example: drop_missing(subset=["col1"], how="any")"""
         try:
             name = store.resolve_name(df_name)
@@ -74,6 +77,7 @@ def register_tools(mcp: FastMCP, store: DataStore) -> None:
     ) -> str:
         """Fill missing values. Strategies: 'value' (literal), 'mean', 'median', 'mode', 'ffill', 'bfill'.
         columns: which columns to fill (None = all columns with nulls).
+        Choose strategy based on distribution: 'median' for skewed numeric, 'mean' for normal, 'mode' for categorical. 'ffill'/'bfill' only for time-series.
         Example: fill_missing(columns=["Revenue"], strategy="median")"""
         try:
             name = store.resolve_name(df_name)
@@ -131,6 +135,7 @@ def register_tools(mcp: FastMCP, store: DataStore) -> None:
     def filter_rows(column: str, operator: str, value: str, df_name: str = "") -> str:
         """Filter rows by condition. Operators: ==, !=, >, <, >=, <=, contains, isin.
         For isin: provide comma-separated values. Value is auto-cast for numeric columns.
+        Use to subset data or remove invalid rows. WARNING: modifies in-place. Use copy_dataframe first if you need the full dataset later.
         Example: filter_rows(column="Revenue", operator=">", value="1000")
         Example: filter_rows(column="CargoType", operator="isin", value="GCR,SCR")"""
         try:
@@ -181,6 +186,7 @@ def register_tools(mcp: FastMCP, store: DataStore) -> None:
     @mcp.tool()
     def rename_columns(mapping: dict[str, str], df_name: str = "") -> str:
         """Rename columns using an old->new mapping.
+        Standardize column names early in the pipeline (snake_case, no spaces, explicit names). Prevents reference errors throughout the pipeline.
         Example: rename_columns(mapping={"old_name": "new_name"})"""
         try:
             name = store.resolve_name(df_name)
@@ -205,6 +211,7 @@ def register_tools(mcp: FastMCP, store: DataStore) -> None:
     ) -> str:
         """Clip outlier values in a numeric column.
         Methods: 'iqr' (Q1 - multiplier*IQR, Q3 + multiplier*IQR) or 'quantile' (lower/upper quantile).
+        Use AFTER detect_outliers confirms outliers exist. Only clip if outliers are errors; genuine extreme values should be kept.
         Example: clip_outliers(column="Revenue", method="iqr", iqr_multiplier=1.5)"""
         try:
             name = store.resolve_name(df_name)
@@ -243,6 +250,7 @@ def register_tools(mcp: FastMCP, store: DataStore) -> None:
     @mcp.tool()
     def sort_values(columns: list[str], ascending: bool = True, df_name: str = "") -> str:
         """Sort the dataframe by one or more columns.
+        Sort before visual inspection or time-series analysis. Useful before plot_line.
         Example: sort_values(columns=["Revenue"], ascending=False)"""
         try:
             name = store.resolve_name(df_name)

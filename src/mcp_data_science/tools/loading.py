@@ -10,7 +10,8 @@ def register_tools(mcp: FastMCP, store: DataStore) -> None:
     @mcp.tool()
     def load_csv(file_path: str, name: str = "", separator: str = ",") -> str:
         """Load a CSV file into memory. The name defaults to the filename.
-        This becomes the current active dataframe."""
+        This becomes the current active dataframe.
+        Always the first step in any pipeline. After loading, immediately run quality_report to understand the data."""
         try:
             resolved_name = name if name else Path(file_path).stem
             df = pd.read_csv(file_path, sep=separator)
@@ -31,7 +32,8 @@ def register_tools(mcp: FastMCP, store: DataStore) -> None:
 
     @mcp.tool()
     def save_csv(file_path: str, df_name: str = "") -> str:
-        """Save a dataframe to a CSV file (without row index)."""
+        """Save a dataframe to a CSV file (without row index).
+        Use at the end of a pipeline to export cleaned/processed data."""
         try:
             name = store.resolve_name(df_name)
             df = store.get(name)
@@ -42,7 +44,8 @@ def register_tools(mcp: FastMCP, store: DataStore) -> None:
 
     @mcp.tool()
     def list_dataframes() -> str:
-        """List all loaded dataframes with their shapes."""
+        """List all loaded dataframes with their shapes.
+        Check what datasets are available before switching or merging."""
         names = store.list_names()
         if not names:
             return "No dataframes loaded."
@@ -55,7 +58,8 @@ def register_tools(mcp: FastMCP, store: DataStore) -> None:
 
     @mcp.tool()
     def set_current_dataframe(name: str) -> str:
-        """Switch the current active dataframe."""
+        """Switch the current active dataframe.
+        Switch active dataset when working with multiple dataframes."""
         try:
             store.current_name = name
             return f"Current dataframe set to '{name}'."
@@ -65,7 +69,7 @@ def register_tools(mcp: FastMCP, store: DataStore) -> None:
     @mcp.tool()
     def copy_dataframe(source_name: str, new_name: str) -> str:
         """Create a deep copy of a dataframe under a new name.
-        Useful to save a snapshot before destructive operations."""
+        Use BEFORE any destructive operation (dropping, filtering, encoding) if you may need the original data later."""
         try:
             store.copy(source_name, new_name)
             df = store.get(new_name)
@@ -82,7 +86,8 @@ def register_tools(mcp: FastMCP, store: DataStore) -> None:
         result_name: str = "",
     ) -> str:
         """Merge two dataframes (like SQL JOIN). How: 'inner', 'left', 'right', 'outer'.
-        Result is stored as a new dataframe."""
+        Result is stored as a new dataframe.
+        Use when data is split across files. Always verify join keys exist in both dataframes with get_info first."""
         try:
             left = store.get(left_name)
             right = store.get(right_name)
@@ -107,6 +112,7 @@ def register_tools(mcp: FastMCP, store: DataStore) -> None:
         df_name: str = "",
     ) -> str:
         """Create a pivot table. Stores result as a new dataframe.
+        Creates summary tables. Use for reporting or reshaping data from long to wide format.
         Example: pivot_table(index=["City"], columns="Category", values="Revenue", agg_func="mean")"""
         try:
             name = store.resolve_name(df_name)
@@ -138,6 +144,7 @@ def register_tools(mcp: FastMCP, store: DataStore) -> None:
         df_name: str = "",
     ) -> str:
         """Unpivot (wide to long format). id_vars are columns to keep, value_vars are columns to melt.
+        Reverse of pivot. Use when data is in wide format but tools expect long format.
         Example: melt_dataframe(id_vars=["Name","City"], value_vars=["Score","Revenue"])"""
         try:
             name = store.resolve_name(df_name)
@@ -160,6 +167,7 @@ def register_tools(mcp: FastMCP, store: DataStore) -> None:
         result_name: str = "",
     ) -> str:
         """Concatenate multiple dataframes along rows (axis=0) or columns (axis=1).
+        Combine train and test sets back together, or append new data.
         Example: concat_dataframes(names=["data_train", "data_test"], axis=0)"""
         try:
             dfs = []

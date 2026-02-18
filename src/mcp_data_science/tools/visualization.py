@@ -19,6 +19,7 @@ def register_tools(mcp: FastMCP, store: DataStore) -> None:
         df_name: str = "",
     ) -> Image:
         """Plot a histogram for a numeric column with optional KDE overlay and log-scaled x-axis.
+        Use during EDA to understand numeric distributions. Set log_scale=True for skewed data (revenue, prices) — otherwise histogram is unreadable. Check for bimodality indicating subgroups.
         Example: plot_histogram(column="Revenue", bins=50, kde=True, log_scale=True)"""
         try:
             name = store.resolve_name(df_name)
@@ -49,6 +50,7 @@ def register_tools(mcp: FastMCP, store: DataStore) -> None:
         df_name: str = "",
     ) -> Image:
         """Bar plot of value counts (top N categories). Vertical or horizontal.
+        Understand categorical distributions during EDA. Reveals rare categories for potential grouping and dominant categories for stratified sampling.
         Example: plot_bar(column="CargoType", top_n=10, orientation="horizontal")"""
         try:
             name = store.resolve_name(df_name)
@@ -86,6 +88,7 @@ def register_tools(mcp: FastMCP, store: DataStore) -> None:
         df_name: str = "",
     ) -> Image:
         """Scatter plot between two numeric columns. Optional color grouping by hue column.
+        Explore relationships between two numeric variables. Add hue for categorical grouping to reveal subgroup patterns.
         Example: plot_scatter(x="Revenue", y="Weight", hue="CargoType")"""
         try:
             name = store.resolve_name(df_name)
@@ -113,6 +116,7 @@ def register_tools(mcp: FastMCP, store: DataStore) -> None:
         df_name: str = "",
     ) -> Image:
         """Box plot for outlier visualization. Optional grouping by a categorical column.
+        Visualize outliers and compare distributions across groups. Complements detect_outliers with a visual perspective.
         Example: plot_box(column="Revenue", by="CargoType")"""
         try:
             name = store.resolve_name(df_name)
@@ -146,6 +150,7 @@ def register_tools(mcp: FastMCP, store: DataStore) -> None:
     ) -> Image:
         """Correlation heatmap with lower triangle mask and annotations.
         Methods: pearson, spearman, kendall. Empty columns = all numeric.
+        Run after all numeric features are prepared. Identifies multicollinearity (features correlated with each other) and features correlated with the target.
         Example: plot_correlation_matrix(method="pearson")"""
         try:
             import numpy as np
@@ -194,6 +199,7 @@ def register_tools(mcp: FastMCP, store: DataStore) -> None:
     ) -> Image:
         """Seaborn pairplot for up to 6 columns. Shows distributions on diagonal and
         scatter plots on off-diagonal. Limit to 6 columns for readability.
+        Expensive computation. Use after feature_importance to focus on top features.
         Example: plot_pairplot(columns=["Revenue","Weight","Score"], hue="Category")"""
         try:
             name = store.resolve_name(df_name)
@@ -219,7 +225,8 @@ def register_tools(mcp: FastMCP, store: DataStore) -> None:
     @mcp.tool()
     def plot_missing_values(save_path: str = "", df_name: str = "") -> Image:
         """Heatmap showing missing value patterns across all columns.
-        White = present, colored = missing. Helps identify systematic missing data.
+        White = present, colored = missing. Use when quality_report shows significant missingness.
+        Patterns in the heatmap reveal if data is missing randomly or systematically.
         Example: plot_missing_values()"""
         try:
             name = store.resolve_name(df_name)
@@ -252,6 +259,7 @@ def register_tools(mcp: FastMCP, store: DataStore) -> None:
         df_name: str = "",
     ) -> Image:
         """Line plot. Supports multiple y columns overlaid. Essential for time-series and trends.
+        For time-series data and trends. Sort data by x-axis column first for meaningful results. Supports multiple y columns overlaid.
         Example: plot_line(x="date", y="Revenue")
         Example: plot_line(x="month", y=["Revenue", "Cost"], hue="Category")"""
         try:

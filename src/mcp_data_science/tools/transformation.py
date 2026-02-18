@@ -10,6 +10,7 @@ def register_tools(mcp: FastMCP, store: DataStore) -> None:
     @mcp.tool()
     def create_column(new_column: str, expression: str, df_name: str = "") -> str:
         """Create a new column using a pandas eval expression. Columns are referenced by name.
+        For domain-relevant feature engineering: ratios, differences, interactions. Always add epsilon (1e-5) to denominators to avoid division by zero.
         Example: create_column(new_column="Yield", expression="Revenue / (ChargeableWeight + 1e-5)")
         Example: create_column(new_column="WeightPerPiece", expression="ChargeableWeight / (Pieces + 1e-5)")"""
         try:
@@ -34,6 +35,7 @@ def register_tools(mcp: FastMCP, store: DataStore) -> None:
     ) -> str:
         """Apply log transform to columns. Creates new columns named Log_{column}.
         Methods: 'log1p' (recommended, handles zeros), 'log' (natural log), 'log10'.
+        Use on right-skewed distributions (|skewness| > 1). 'log1p' is safest (handles zeros). Check result with plot_histogram.
         Example: log_transform(columns=["Revenue","ChargeableWeight"], method="log1p")"""
         try:
             name = store.resolve_name(df_name)
@@ -80,6 +82,7 @@ def register_tools(mcp: FastMCP, store: DataStore) -> None:
         df_name: str = "",
     ) -> str:
         """Scale numeric columns in-place. Methods: 'minmax' (0-1), 'standard' (z-score), 'robust' (IQR-based).
+        Only needed for distance-based models (linear, logistic). Tree-based models do NOT need normalization. Use 'standard' by default, 'robust' if outliers remain.
         Example: normalize(columns=["Revenue","Weight"], method="standard")"""
         try:
             name = store.resolve_name(df_name)
@@ -114,6 +117,7 @@ def register_tools(mcp: FastMCP, store: DataStore) -> None:
     def apply_mapping(column: str, mapping: dict[str, str], df_name: str = "") -> str:
         """Map values in a column using a dictionary. Unmapped values stay as-is.
         Values are auto-converted to match the column's type.
+        Map categorical values to new values. Useful for translating codes, merging similar categories, or creating ordinal mappings.
         Example: apply_mapping(column="FlownMonth", mapping={"SEPTEMBER":"9","OCTOBER":"10"})"""
         try:
             name = store.resolve_name(df_name)
@@ -142,6 +146,7 @@ def register_tools(mcp: FastMCP, store: DataStore) -> None:
     @mcp.tool()
     def convert_dtype(columns: list[str], dtype: str, df_name: str = "") -> str:
         """Convert column types. Dtypes: 'int', 'float', 'str', 'category', 'datetime', 'bool'.
+        Fix incorrect types (numeric stored as string). Do this BEFORE statistical analysis or encoding.
         Example: convert_dtype(columns=["age","score"], dtype="float")"""
         try:
             name = store.resolve_name(df_name)
@@ -178,6 +183,7 @@ def register_tools(mcp: FastMCP, store: DataStore) -> None:
     @mcp.tool()
     def replace_values(column: str, old_value: str, new_value: str, df_name: str = "") -> str:
         """Replace a specific value with another in a column. Types are auto-cast.
+        Fix known data entry errors or standardize values. Use after identifying issues with get_unique_values.
         Example: replace_values(column="Status", old_value="N/A", new_value="Unknown")"""
         try:
             name = store.resolve_name(df_name)
@@ -209,6 +215,7 @@ def register_tools(mcp: FastMCP, store: DataStore) -> None:
         df_name: str = "",
     ) -> str:
         """Keep only columns matching specified dtypes. Drops non-matching columns.
+        Filter columns by type. Use include=['number'] before modeling to keep only numeric features.
         Example: select_dtypes(include=["number"]) — keeps only numeric columns.
         Example: select_dtypes(exclude=["object"]) — drops string columns."""
         try:
@@ -236,6 +243,7 @@ def register_tools(mcp: FastMCP, store: DataStore) -> None:
     ) -> str:
         """Clean a string column. Operations applied in order: 'strip', 'lower', 'upper', 'title', 'replace'.
         For 'replace': uses replace_old and replace_new parameters.
+        Run on text columns BEFORE any encoding. Inconsistent casing or whitespace creates spurious categories.
         Example: string_clean(column="Name", operations=["strip","lower"])"""
         try:
             name = store.resolve_name(df_name)

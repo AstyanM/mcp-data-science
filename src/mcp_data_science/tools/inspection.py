@@ -11,6 +11,7 @@ def register_tools(mcp: FastMCP, store: DataStore) -> None:
     @mcp.tool()
     def get_head(n: int = 5, df_name: str = "") -> str:
         """Return the first N rows of the dataframe as a formatted table.
+        Quick first look after loading. Verify data loaded correctly and understand structure.
         Example: get_head(n=10)"""
         try:
             name = store.resolve_name(df_name)
@@ -22,6 +23,7 @@ def register_tools(mcp: FastMCP, store: DataStore) -> None:
     @mcp.tool()
     def get_tail(n: int = 5, df_name: str = "") -> str:
         """Return the last N rows of the dataframe as a formatted table.
+        Check the last rows. Useful for time-series to see the most recent data.
         Example: get_tail(n=10)"""
         try:
             name = store.resolve_name(df_name)
@@ -33,7 +35,8 @@ def register_tools(mcp: FastMCP, store: DataStore) -> None:
     @mcp.tool()
     def get_info(df_name: str = "") -> str:
         """Get column dtypes, non-null counts, and memory usage for the dataframe.
-        Similar to pandas df.info() output."""
+        Similar to pandas df.info() output.
+        Check column types and non-null counts. Run when a tool reports 'column not found' to verify names."""
         try:
             name = store.resolve_name(df_name)
             df = store.get(name)
@@ -46,7 +49,8 @@ def register_tools(mcp: FastMCP, store: DataStore) -> None:
     @mcp.tool()
     def get_statistics(df_name: str = "") -> str:
         """Get descriptive statistics for all columns (numeric and categorical).
-        Returns count, mean, std, min, quartiles, max for numeric; count, unique, top, freq for categorical."""
+        Returns count, mean, std, min, quartiles, max for numeric; count, unique, top, freq for categorical.
+        Understand distributions. Run after quality_report to decide cleaning strategies."""
         try:
             name = store.resolve_name(df_name)
             df = store.get(name)
@@ -56,7 +60,8 @@ def register_tools(mcp: FastMCP, store: DataStore) -> None:
 
     @mcp.tool()
     def get_shape(df_name: str = "") -> str:
-        """Get the number of rows and columns in the dataframe."""
+        """Get the number of rows and columns in the dataframe.
+        Quick dimension check. Always run after filtering or dropping to verify not too many rows lost."""
         try:
             name = store.resolve_name(df_name)
             df = store.get(name)
@@ -67,7 +72,8 @@ def register_tools(mcp: FastMCP, store: DataStore) -> None:
     @mcp.tool()
     def quality_report(df_name: str = "") -> str:
         """Comprehensive data quality report: dtype per column, missing value count and %,
-        unique value count, and total duplicate rows. Essential first step in any EDA."""
+        unique value count, and total duplicate rows. ESSENTIAL FIRST STEP after loading data.
+        Run before any cleaning or transformation. Reveals the full data quality landscape in one call."""
         try:
             name = store.resolve_name(df_name)
             df = store.get(name)
@@ -97,6 +103,7 @@ def register_tools(mcp: FastMCP, store: DataStore) -> None:
     @mcp.tool()
     def get_unique_values(column: str, top_n: int = 50, df_name: str = "") -> str:
         """List unique values with their frequencies for a column, sorted by count descending.
+        Understand categorical columns before encoding. Reveals rare categories that may need grouping.
         Example: get_unique_values(column="CargoType", top_n=20)"""
         try:
             name = store.resolve_name(df_name)
@@ -121,6 +128,7 @@ def register_tools(mcp: FastMCP, store: DataStore) -> None:
         """Detailed single-column analysis: dtype, nulls, unique count,
         statistics (if numeric: min/max/mean/median/std/skew/kurtosis),
         and top 10 value frequencies.
+        Deep-dive into one column. Use when quality_report flags something. Provides skewness for deciding if log_transform is needed.
         Example: get_column_profile(column="Revenue")"""
         try:
             name = store.resolve_name(df_name)
@@ -159,7 +167,8 @@ def register_tools(mcp: FastMCP, store: DataStore) -> None:
 
     @mcp.tool()
     def sample_data(n: int = 10, random_state: int = 42, df_name: str = "") -> str:
-        """Return a random sample of N rows. Useful for quick inspection of data variety.
+        """Return a random sample of N rows. Use when head/tail are not representative.
+        Random sampling reveals data variety better.
         Example: sample_data(n=5)"""
         try:
             name = store.resolve_name(df_name)

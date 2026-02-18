@@ -14,6 +14,7 @@ def register_tools(mcp: FastMCP, store: DataStore) -> None:
     ) -> str:
         """One-hot encode categorical columns (creates binary columns).
         drop_first=True avoids multicollinearity (recommended for modeling).
+        Best for low-cardinality (2-10 categories). Always drop_first=True for modeling. WARNING: high-cardinality columns create too many columns — use target_encode instead.
         Example: one_hot_encode(columns=["CargoType"], drop_first=True)"""
         try:
             name = store.resolve_name(df_name)
@@ -42,6 +43,7 @@ def register_tools(mcp: FastMCP, store: DataStore) -> None:
     ) -> str:
         """Target-encode high-cardinality categorical columns. Each category is replaced
         by the smoothed mean of the target variable. Good for columns with many unique values.
+        Best for high-cardinality (>10 categories). IMPORTANT: to avoid data leakage, split data first with train_test_split, then encode training set only.
         Example: target_encode(columns=["AgentCode","OriginCode"], target_column="Log_Revenue", smoothing=10.0)"""
         try:
             import category_encoders as ce
@@ -73,6 +75,7 @@ def register_tools(mcp: FastMCP, store: DataStore) -> None:
     @mcp.tool()
     def label_encode(columns: list[str], df_name: str = "") -> str:
         """Label-encode categorical columns: map each unique value to an integer (0, 1, 2, ...).
+        Use ONLY for ordinal data with natural order (e.g., low/medium/high, small/large). For nominal categories without order, use one_hot_encode or target_encode.
         Example: label_encode(columns=["City","Category"])"""
         try:
             from sklearn.preprocessing import LabelEncoder
@@ -106,6 +109,7 @@ def register_tools(mcp: FastMCP, store: DataStore) -> None:
     @mcp.tool()
     def frequency_encode(columns: list[str], df_name: str = "") -> str:
         """Replace each category with its frequency (count / total rows).
+        Quick encoding that preserves frequency information. Useful for initial exploration or when no clear target variable exists.
         Example: frequency_encode(columns=["City","Category"])"""
         try:
             name = store.resolve_name(df_name)

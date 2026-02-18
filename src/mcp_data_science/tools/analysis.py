@@ -16,6 +16,7 @@ def register_tools(mcp: FastMCP, store: DataStore) -> None:
     ) -> str:
         """Compute pairwise correlation between two numeric columns.
         Methods: pearson, spearman, kendall. Returns value and interpretation.
+        Measure relationship between two numeric columns. Use for targeted investigation after plot_correlation_matrix reveals interesting pairs.
         Example: get_correlation(col_a="Revenue", col_b="Weight", method="pearson")"""
         try:
             name = store.resolve_name(df_name)
@@ -48,6 +49,7 @@ def register_tools(mcp: FastMCP, store: DataStore) -> None:
     @mcp.tool()
     def get_value_counts(column: str, top_n: int = 20, df_name: str = "") -> str:
         """Value counts with percentages, sorted descending. Shows top_n values.
+        Detailed frequency analysis with percentages and cumulative percentages. More detailed than plot_bar.
         Example: get_value_counts(column="City", top_n=10)"""
         try:
             name = store.resolve_name(df_name)
@@ -80,6 +82,7 @@ def register_tools(mcp: FastMCP, store: DataStore) -> None:
     ) -> str:
         """Detect outliers in a numeric column. Methods: 'iqr' (threshold=IQR multiplier)
         or 'zscore' (threshold=z-score cutoff). Returns count, %, and boundary values.
+        Run BEFORE clip_outliers to quantify outliers and determine if they are errors or genuine. Do not automatically clip without this check.
         Example: detect_outliers(column="Revenue", method="iqr", threshold=1.5)"""
         try:
             name = store.resolve_name(df_name)
@@ -136,6 +139,7 @@ def register_tools(mcp: FastMCP, store: DataStore) -> None:
         df_name: str = "",
     ) -> str:
         """GroupBy aggregation. Functions: mean, sum, count, min, max, median, std.
+        For segmented analysis: understanding how metrics differ across groups. Useful for business questions like 'average revenue by city'.
         Example: group_aggregate(group_by=["City"], agg_column="Revenue", agg_func="mean")"""
         try:
             name = store.resolve_name(df_name)
@@ -167,6 +171,7 @@ def register_tools(mcp: FastMCP, store: DataStore) -> None:
         df_name: str = "",
     ) -> str:
         """Cross-tabulation of two categorical columns. Optional normalization (percentages).
+        Understand relationships between two categorical variables. Set normalize=True to see percentages instead of raw counts.
         Example: crosstab(index_col="City", columns_col="Category", normalize=True)"""
         try:
             name = store.resolve_name(df_name)
@@ -194,7 +199,8 @@ def register_tools(mcp: FastMCP, store: DataStore) -> None:
         start: int = 0,
         df_name: str = "",
     ) -> str:
-        """Add or reset a numeric row index as a column. Useful after filtering operations.
+        """Add or reset a numeric row index as a column.
+        Add a numeric identifier column. Useful after filtering to create unique IDs or reset row numbering.
         Example: add_row_index(column_name="row_id", start=1)"""
         try:
             name = store.resolve_name(df_name)
