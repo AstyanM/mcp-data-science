@@ -1,0 +1,33 @@
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+*.egg
+.eggs/
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Data files
+data/
+*.csv
+!examples/*.csv
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Claude
+.taskmaster/
+.claude/
