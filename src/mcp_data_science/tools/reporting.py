@@ -108,6 +108,7 @@ def register_tools(mcp: FastMCP, store: DataStore) -> None:
             lines = html_content.split("\n")
             html_lines = []
             in_table = False
+            table_row_count = 0
             for line in lines:
                 stripped = line.strip()
                 if stripped.startswith("# "):
@@ -120,12 +121,14 @@ def register_tools(mcp: FastMCP, store: DataStore) -> None:
                     html_lines.append("<hr>")
                 elif stripped.startswith("|"):
                     if not in_table:
-                        html_lines.append("<table border='1' cellpadding='6' cellspacing='0' style='border-collapse:collapse;'>")
+                        html_lines.append("<table>")
                         in_table = True
+                        table_row_count = 0
                     cells = [c.strip() for c in stripped.strip("|").split("|")]
                     if all(set(c) <= {"-", " ", ":"} for c in cells):
                         continue
-                    tag = "th" if not any("td" in l for l in html_lines[-3:]) else "td"
+                    tag = "th" if table_row_count == 0 else "td"
+                    table_row_count += 1
                     row = "".join(f"<{tag}>{c}</{tag}>" for c in cells)
                     html_lines.append(f"<tr>{row}</tr>")
                 elif stripped.startswith("- **"):
@@ -138,11 +141,18 @@ def register_tools(mcp: FastMCP, store: DataStore) -> None:
                     if in_table:
                         html_lines.append("</table>")
                         in_table = False
+                        table_row_count = 0
                     html_lines.append("<br>")
                 else:
-                    # Bold
-                    processed = re.sub(r'\*\*(.+?)\*\*', r'<strong>\1</strong>', stripped)
-                    html_lines.append(f"<p>{processed}</p>")
+                    # Markdown image ![alt](src) → <img>
+                    img_match = re.match(r'!\[([^\]]*)\]\(([^)]+)\)', stripped)
+                    if img_match:
+                        alt, src = img_match.group(1), img_match.group(2)
+                        html_lines.append(f'<img src="{src}" alt="{alt}" style="max-width:100%; height:auto;">')
+                    else:
+                        # Bold
+                        processed = re.sub(r'\*\*(.+?)\*\*', r'<strong>\1</strong>', stripped)
+                        html_lines.append(f"<p>{processed}</p>")
 
             if in_table:
                 html_lines.append("</table>")
@@ -150,22 +160,178 @@ def register_tools(mcp: FastMCP, store: DataStore) -> None:
             html_body = "\n".join(html_lines)
 
             full_html = f"""<!DOCTYPE html>
-<html>
+<html lang="fr">
 <head>
 <meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Data Science Report</title>
 <style>
-  body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; max-width: 1000px; margin: 40px auto; padding: 0 20px; line-height: 1.6; color: #333; }}
-  h1 {{ color: #2c3e50; border-bottom: 2px solid #3498db; padding-bottom: 10px; }}
-  h2 {{ color: #2980b9; margin-top: 30px; }}
-  h3 {{ color: #7f8c8d; }}
-  table {{ width: 100%; margin: 15px 0; }}
-  th {{ background: #3498db; color: white; text-align: left; }}
-  td {{ border: 1px solid #ddd; }}
-  tr:nth-child(even) {{ background: #f8f9fa; }}
-  img {{ margin: 15px 0; border: 1px solid #ddd; border-radius: 4px; }}
-  hr {{ border: none; border-top: 1px solid #eee; margin: 30px 0; }}
-  li {{ margin: 5px 0; }}
+  /* ── Warm stone + amber design system ── */
+  :root {{
+    --bg:          rgb(252, 250, 247);
+    --bg-secondary:rgb(245, 241, 235);
+    --fg:          rgb(28, 25, 23);
+    --fg-secondary:rgb(87, 83, 78);
+    --border:      rgb(214, 211, 209);
+    --accent:      rgb(217, 119, 6);
+    --accent-hover:rgb(180, 83, 9);
+    --accent-10:   rgba(217, 119, 6, 0.10);
+    --accent-20:   rgba(217, 119, 6, 0.20);
+    --radius-sm:   6px;
+    --radius-md:   10px;
+    --radius-lg:   14px;
+  }}
+
+  *, *::before, *::after {{ box-sizing: border-box; margin: 0; padding: 0; }}
+
+  body {{
+    font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: var(--bg);
+    color: var(--fg);
+    line-height: 1.7;
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 48px 28px 96px;
+    -webkit-font-smoothing: antialiased;
+  }}
+
+  /* Subtle grain overlay */
+  body::after {{
+    content: '';
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    pointer-events: none;
+    opacity: 0.025;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.7' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    background-repeat: repeat;
+    background-size: 256px 256px;
+  }}
+
+  /* ── Typography ── */
+  h1 {{
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--fg);
+    margin: 0 0 8px;
+    letter-spacing: -0.02em;
+    border-bottom: 2px solid var(--accent);
+    padding-bottom: 12px;
+  }}
+
+  h2 {{
+    font-size: 1.3rem;
+    font-weight: 600;
+    color: var(--fg);
+    margin: 48px 0 12px;
+    padding-left: 12px;
+    border-left: 3px solid var(--accent);
+  }}
+
+  h3 {{
+    font-size: 1.05rem;
+    font-weight: 600;
+    color: var(--fg-secondary);
+    margin: 28px 0 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    font-size: 0.8rem;
+  }}
+
+  p {{
+    color: var(--fg-secondary);
+    margin: 10px 0;
+  }}
+
+  strong {{ color: var(--fg); font-weight: 600; }}
+
+  /* ── Lists ── */
+  li {{
+    color: var(--fg-secondary);
+    margin: 6px 0;
+    padding-left: 20px;
+    list-style: none;
+    position: relative;
+  }}
+
+  li::before {{
+    content: '▸';
+    color: var(--accent);
+    font-size: 0.75em;
+    position: absolute;
+    left: 0;
+    top: 0.15em;
+  }}
+
+  /* ── Tables ── */
+  table {{
+    width: 100%;
+    margin: 18px 0;
+    border-collapse: collapse;
+    border-radius: var(--radius-md);
+    overflow: hidden;
+    border: 1px solid var(--border);
+    font-size: 0.9rem;
+  }}
+
+  th {{
+    background: var(--bg-secondary);
+    color: var(--fg);
+    font-weight: 600;
+    text-align: left;
+    padding: 10px 14px;
+    border-bottom: 2px solid var(--border);
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }}
+
+  td {{
+    padding: 9px 14px;
+    border-bottom: 1px solid var(--border);
+    color: var(--fg-secondary);
+  }}
+
+  tr:last-child td {{ border-bottom: none; }}
+
+  tr:hover td {{
+    background: var(--accent-10);
+    color: var(--fg);
+  }}
+
+  /* ── Images ── */
+  img {{
+    display: block;
+    max-width: 100%;
+    height: auto;
+    margin: 24px auto;
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--border);
+    box-shadow: 0 4px 24px rgba(28, 25, 23, 0.08);
+  }}
+
+  /* ── Dividers ── */
+  hr {{
+    border: none;
+    border-top: 1px solid var(--border);
+    margin: 40px 0;
+  }}
+
+  /* ── Accent chip on h2 ── */
+  h2 span.badge {{
+    display: inline-block;
+    background: var(--accent-10);
+    color: var(--accent);
+    border-radius: 99px;
+    font-size: 0.7rem;
+    padding: 2px 8px;
+    font-weight: 600;
+    vertical-align: middle;
+    margin-left: 8px;
+  }}
+
+  /* ── br spacing ── */
+  br {{ display: block; margin: 4px 0; content: ''; }}
 </style>
 </head>
 <body>
