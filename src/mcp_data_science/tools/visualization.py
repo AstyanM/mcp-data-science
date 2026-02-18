@@ -294,3 +294,220 @@ def register_tools(mcp: FastMCP, store: DataStore) -> None:
             fig, ax = plt.subplots()
             ax.text(0.5, 0.5, f"Error: {e}", ha="center", va="center", transform=ax.transAxes)
             return fig_to_image(fig)
+
+    @mcp.tool()
+    def plot_violin(
+        column: str,
+        by: str = "",
+        save_path: str = "",
+        df_name: str = "",
+    ) -> Image:
+        """Violin plot: combines box plot with KDE to show full distribution shape.
+        Better than boxplot for skewed or multimodal distributions. Optional grouping.
+        Example: plot_violin(column="Revenue", by="CargoType")"""
+        try:
+            name = store.resolve_name(df_name)
+            df = store.get(name)
+            if column not in df.columns:
+                raise ValueError(f"Column '{column}' not found. Available: {df.columns.tolist()}")
+
+            fig, ax = plt.subplots(figsize=(10, 6))
+            if by and by in df.columns:
+                sns.violinplot(data=df, x=by, y=column, ax=ax, inner="box")
+                ax.set_title(f"{column} by {by}")
+                ax.tick_params(axis="x", rotation=45)
+            else:
+                sns.violinplot(data=df, y=column, ax=ax, inner="box")
+                ax.set_title(f"Violin plot of {column}")
+
+            fig.tight_layout()
+            plot_name = f"violin_{column}_by_{by}" if by else f"violin_{column}"
+            return fig_to_image_and_store(fig, store, plot_name, save_path)
+        except Exception as e:
+            fig, ax = plt.subplots()
+            ax.text(0.5, 0.5, f"Error: {e}", ha="center", va="center", transform=ax.transAxes)
+            return fig_to_image(fig)
+
+    @mcp.tool()
+    def plot_qq(
+        column: str,
+        save_path: str = "",
+        df_name: str = "",
+    ) -> Image:
+        """Q-Q plot to visually assess if a column follows a normal distribution.
+        Points on the diagonal = normal. Deviations show skewness or heavy tails.
+        Use alongside normality_test for visual confirmation.
+        Example: plot_qq(column="Revenue")"""
+        try:
+            from scipy import stats
+
+            name = store.resolve_name(df_name)
+            df = store.get(name)
+            if column not in df.columns:
+                raise ValueError(f"Column '{column}' not found.")
+
+            fig, ax = plt.subplots(figsize=(8, 8))
+            data = df[column].dropna()
+            stats.probplot(data, dist="norm", plot=ax)
+            ax.set_title(f"Q-Q Plot — {column}")
+            ax.get_lines()[0].set_markersize(3)
+            fig.tight_layout()
+            return fig_to_image_and_store(fig, store, f"qq_{column}", save_path)
+        except Exception as e:
+            fig, ax = plt.subplots()
+            ax.text(0.5, 0.5, f"Error: {e}", ha="center", va="center", transform=ax.transAxes)
+            return fig_to_image(fig)
+
+    @mcp.tool()
+    def plot_stacked_bar(
+        column: str,
+        by: str,
+        normalize: bool = True,
+        top_n: int = 10,
+        save_path: str = "",
+        df_name: str = "",
+    ) -> Image:
+        """Stacked bar chart showing composition of one categorical within another.
+        normalize=True shows percentages (100% stacked), False shows raw counts.
+        Example: plot_stacked_bar(column="ProductCode", by="CargoType", normalize=True)"""
+        try:
+            name = store.resolve_name(df_name)
+            df = store.get(name)
+            for col in [column, by]:
+                if col not in df.columns:
+                    raise ValueError(f"Column '{col}' not found.")
+
+            ct = pd.crosstab(df[column], df[by])
+            ct = ct.loc[ct.sum(axis=1).nlargest(top_n).index]
+
+            if normalize:
+                ct = ct.div(ct.sum(axis=1), axis=0) * 100
+
+            fig, ax = plt.subplots(figsize=(12, 6))
+            ct.plot(kind="bar", stacked=True, ax=ax)
+            ax.set_title(f"{'Proportions' if normalize else 'Counts'}: {column} by {by}")
+            ax.set_ylabel("%" if normalize else "Count")
+            ax.legend(title=by, bbox_to_anchor=(1.05, 1), loc="upper left")
+            ax.tick_params(axis="x", rotation=45)
+            fig.tight_layout()
+            return fig_to_image_and_store(fig, store, f"stacked_bar_{column}_by_{by}", save_path)
+        except Exception as e:
+            fig, ax = plt.subplots()
+            ax.text(0.5, 0.5, f"Error: {e}", ha="center", va="center", transform=ax.transAxes)
+            return fig_to_image(fig)
+
+    @mcp.tool()
+    def plot_heatmap(
+        index_col: str,
+        columns_col: str,
+        values_col: str,
+        agg_func: str = "mean",
+        save_path: str = "",
+        df_name: str = "",
+    ) -> Image:
+        """Heatmap of aggregated values in a pivot table format.
+        Shows a color-coded matrix of one metric across two categorical dimensions.
+        Example: plot_heatmap(index_col="OriginCode", columns_col="FlownMonth", values_col="Revenue", agg_func="sum")"""
+        try:
+            import numpy as np
+
+            name = store.resolve_name(df_name)
+            df = store.get(name)
+            for col in [index_col, columns_col, values_col]:
+                if col not in df.columns:
+                    raise ValueError(f"Column '{col}' not found.")
+
+            pivot = df.pivot_table(index=index_col, columns=columns_col, values=values_col, aggfunc=agg_func)
+            # Limit to top 20 rows by total
+            if len(pivot) > 20:
+                pivot = pivot.loc[pivot.sum(axis=1).nlargest(20).index]
+
+            fig, ax = plt.subplots(figsize=(12, max(6, len(pivot) * 0.4)))
+            sns.heatmap(pivot, annot=len(pivot) <= 15 and len(pivot.columns) <= 10,
+                        fmt=".1f", cmap="YlOrRd", ax=ax)
+            ax.set_title(f"Heatmap: {agg_func}({values_col}) by {index_col} x {columns_col}")
+            fig.tight_layout()
+            return fig_to_image_and_store(fig, store, f"heatmap_{index_col}_{columns_col}_{values_col}", save_path)
+        except Exception as e:
+            fig, ax = plt.subplots()
+            ax.text(0.5, 0.5, f"Error: {e}", ha="center", va="center", transform=ax.transAxes)
+            return fig_to_image(fig)
+
+    @mcp.tool()
+    def plot_distribution_comparison(
+        column: str,
+        by: str,
+        top_n_groups: int = 5,
+        save_path: str = "",
+        df_name: str = "",
+    ) -> Image:
+        """Overlay KDE distributions of a numeric column for different groups.
+        Better than separate histograms for comparing distribution shapes across categories.
+        Example: plot_distribution_comparison(column="Revenue", by="CargoType")"""
+        try:
+            name = store.resolve_name(df_name)
+            df = store.get(name)
+            for col in [column, by]:
+                if col not in df.columns:
+                    raise ValueError(f"Column '{col}' not found.")
+
+            top_groups = df[by].value_counts().head(top_n_groups).index
+            fig, ax = plt.subplots(figsize=(10, 6))
+
+            for group in top_groups:
+                subset = df[df[by] == group][column].dropna()
+                if len(subset) > 1:
+                    sns.kdeplot(subset, label=str(group), ax=ax, fill=True, alpha=0.3)
+
+            ax.set_xlabel(column)
+            ax.set_ylabel("Density")
+            ax.set_title(f"Distribution Comparison: {column} by {by}")
+            ax.legend(title=by)
+            fig.tight_layout()
+            return fig_to_image_and_store(fig, store, f"dist_compare_{column}_by_{by}", save_path)
+        except Exception as e:
+            fig, ax = plt.subplots()
+            ax.text(0.5, 0.5, f"Error: {e}", ha="center", va="center", transform=ax.transAxes)
+            return fig_to_image(fig)
+
+    @mcp.tool()
+    def plot_cumulative(
+        column: str,
+        save_path: str = "",
+        df_name: str = "",
+    ) -> Image:
+        """Cumulative distribution function (CDF) plot.
+        Shows what percentage of data falls below each value. Useful for understanding thresholds.
+        Example: plot_cumulative(column="Revenue")"""
+        try:
+            import numpy as np
+
+            name = store.resolve_name(df_name)
+            df = store.get(name)
+            if column not in df.columns:
+                raise ValueError(f"Column '{column}' not found.")
+
+            data = df[column].dropna().sort_values()
+            cdf = np.arange(1, len(data) + 1) / len(data) * 100
+
+            fig, ax = plt.subplots(figsize=(10, 6))
+            ax.plot(data.values, cdf, linewidth=2)
+            ax.set_xlabel(column)
+            ax.set_ylabel("Cumulative %")
+            ax.set_title(f"Cumulative Distribution — {column}")
+            ax.grid(True, alpha=0.3)
+
+            # Add reference lines at key percentiles
+            for pct in [25, 50, 75, 90]:
+                val = data.quantile(pct / 100)
+                ax.axhline(y=pct, color="gray", linestyle="--", alpha=0.5)
+                ax.axvline(x=val, color="gray", linestyle="--", alpha=0.5)
+                ax.annotate(f"P{pct}={val:.1f}", xy=(val, pct), fontsize=8,
+                            xytext=(5, 5), textcoords="offset points")
+
+            fig.tight_layout()
+            return fig_to_image_and_store(fig, store, f"cdf_{column}", save_path)
+        except Exception as e:
+            fig, ax = plt.subplots()
+            ax.text(0.5, 0.5, f"Error: {e}", ha="center", va="center", transform=ax.transAxes)
+            return fig_to_image(fig)

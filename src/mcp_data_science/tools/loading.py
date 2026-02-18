@@ -183,3 +183,51 @@ def register_tools(mcp: FastMCP, store: DataStore) -> None:
             )
         except Exception as e:
             return f"Error: {type(e).__name__} - {e}"
+
+    @mcp.tool()
+    def load_excel(file_path: str, sheet_name: str = "", name: str = "") -> str:
+        """Load an Excel file (.xlsx, .xls) into memory.
+        If sheet_name is empty, loads the first sheet. The name defaults to the filename.
+        Requires openpyxl package for .xlsx files.
+        Example: load_excel(file_path="data.xlsx", sheet_name="Sheet1")"""
+        try:
+            resolved_name = name if name else Path(file_path).stem
+            sheet = sheet_name if sheet_name else 0
+            df = pd.read_excel(file_path, sheet_name=sheet)
+            store.add(resolved_name, df)
+            if not store._csv_dir:
+                store._csv_dir = str(Path(file_path).resolve().parent)
+            dtype_summary = df.dtypes.value_counts().to_dict()
+            dtype_str = ", ".join(f"{v} {k}" for k, v in dtype_summary.items())
+            return (
+                f"Loaded '{resolved_name}' from Excel: {df.shape[0]} rows, {df.shape[1]} columns.\n"
+                f"Columns: {', '.join(df.columns.tolist())}\n"
+                f"Dtypes: {dtype_str}"
+            )
+        except FileNotFoundError:
+            return f"Error: File not found: {file_path}"
+        except Exception as e:
+            return f"Error loading Excel: {type(e).__name__} - {e}"
+
+    @mcp.tool()
+    def load_parquet(file_path: str, name: str = "") -> str:
+        """Load a Parquet file into memory. Parquet is columnar and much faster than CSV for large files.
+        The name defaults to the filename.
+        Example: load_parquet(file_path="data.parquet")"""
+        try:
+            resolved_name = name if name else Path(file_path).stem
+            df = pd.read_parquet(file_path)
+            store.add(resolved_name, df)
+            if not store._csv_dir:
+                store._csv_dir = str(Path(file_path).resolve().parent)
+            dtype_summary = df.dtypes.value_counts().to_dict()
+            dtype_str = ", ".join(f"{v} {k}" for k, v in dtype_summary.items())
+            return (
+                f"Loaded '{resolved_name}' from Parquet: {df.shape[0]} rows, {df.shape[1]} columns.\n"
+                f"Columns: {', '.join(df.columns.tolist())}\n"
+                f"Dtypes: {dtype_str}"
+            )
+        except FileNotFoundError:
+            return f"Error: File not found: {file_path}"
+        except Exception as e:
+            return f"Error loading Parquet: {type(e).__name__} - {e}"

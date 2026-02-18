@@ -210,3 +210,77 @@ def register_tools(mcp: FastMCP, store: DataStore) -> None:
             return f"Added index column '{column_name}' to '{name}' (range {start} to {start + len(df) - 1})."
         except Exception as e:
             return f"Error: {type(e).__name__} - {e}"
+
+    @mcp.tool()
+    def group_aggregate_multi(
+        group_by: list[str],
+        aggregations: dict[str, list[str]],
+        df_name: str = "",
+    ) -> str:
+        """GroupBy with multiple columns and multiple aggregation functions in one call.
+        Much more efficient than calling group_aggregate repeatedly.
+        Functions: mean, sum, count, min, max, median, std.
+        Example: group_aggregate_multi(group_by=["CargoType"], aggregations={"Revenue": ["mean","sum","count"], "Weight": ["mean","median"]})"""
+        try:
+            name = store.resolve_name(df_name)
+            df = store.get(name)
+            all_cols = group_by + list(aggregations.keys())
+            for col in all_cols:
+                if col not in df.columns:
+                    return f"Error: Column '{col}' not found. Available: {df.columns.tolist()}"
+
+            valid_funcs = {"mean", "sum", "count", "min", "max", "median", "std"}
+            for col, funcs in aggregations.items():
+                invalid = set(funcs) - valid_funcs
+                if invalid:
+                    return f"Error: Unknown functions {invalid} for '{col}'. Use: {valid_funcs}"
+
+            result = df.groupby(group_by).agg(aggregations)
+            result.columns = ["_".join(col).strip() for col in result.columns]
+            result = result.reset_index()
+
+            return (
+                f"GroupBy {group_by} with multi-aggregation in '{name}':\n\n"
+                f"{result.to_string(index=False)}"
+            )
+        except Exception as e:
+            return f"Error: {type(e).__name__} - {e}"
+
+    @mcp.tool()
+    def describe_by_group(
+        group_column: str,
+        numeric_columns: list[str] | None = None,
+        df_name: str = "",
+    ) -> str:
+        """Descriptive statistics per group: mean, median, std, min, max for each numeric column within each group.
+        One call replaces many separate group_aggregate calls. If numeric_columns is empty, uses all numeric columns.
+        Example: describe_by_group(group_column="CargoType", numeric_columns=["Revenue","ChargeableWeight"])"""
+        try:
+            name = store.resolve_name(df_name)
+            df = store.get(name)
+            if group_column not in df.columns:
+                return f"Error: Column '{group_column}' not found. Available: {df.columns.tolist()}"
+
+            if numeric_columns:
+                missing = [c for c in numeric_columns if c not in df.columns]
+                if missing:
+                    return f"Error: Columns not found: {missing}"
+                cols = numeric_columns
+            else:
+                cols = [c for c in df.select_dtypes(include="number").columns if c != group_column]
+
+            if not cols:
+                return "Error: No numeric columns found."
+
+            lines = [f"Descriptive statistics by '{group_column}' in '{name}':\n"]
+            for col in cols:
+                lines.append(f"--- {col} ---")
+                stats_df = df.groupby(group_column)[col].agg(
+                    ["count", "mean", "median", "std", "min", "max"]
+                ).round(4)
+                lines.append(stats_df.to_string())
+                lines.append("")
+
+            return "\n".join(lines)
+        except Exception as e:
+            return f"Error: {type(e).__name__} - {e}"

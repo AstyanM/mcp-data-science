@@ -16,7 +16,7 @@ def test_instructions_loaded():
 def test_tool_count():
     from mcp_data_science.server import mcp
     tools = asyncio.run(mcp.list_tools())
-    assert len(tools) == 66
+    assert len(tools) == 102
 
 
 def test_expected_tools_registered():

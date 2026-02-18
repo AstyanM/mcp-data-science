@@ -264,3 +264,47 @@ def register_tools(mcp: FastMCP, store: DataStore) -> None:
             return f"Sorted '{name}' by {columns} (ascending={ascending}). Preview:\n{preview}"
         except Exception as e:
             return f"Error: {type(e).__name__} - {e}"
+
+    @mcp.tool()
+    def bin_column(
+        column: str,
+        bins: int | list[float] = 3,
+        method: str = "quantile",
+        labels: list[str] | None = None,
+        new_column: str = "",
+        df_name: str = "",
+    ) -> str:
+        """Discretize a numeric column into bins/categories.
+        Methods: 'quantile' (equal-frequency bins), 'uniform' (equal-width bins), 'custom' (provide bin edges as list).
+        For custom bins, pass bins as a list of edges, e.g. [0, 100, 1000, float('inf')].
+        Example: bin_column(column="Revenue", bins=3, method="quantile", labels=["low","medium","high"])
+        Example: bin_column(column="Revenue", bins=[0,500,5000,1e9], method="custom", labels=["small","medium","large"])"""
+        try:
+            name = store.resolve_name(df_name)
+            df = store.get(name)
+            if column not in df.columns:
+                return f"Error: Column '{column}' not found. Available: {df.columns.tolist()}"
+            if not pd.api.types.is_numeric_dtype(df[column]):
+                return f"Error: Column '{column}' is not numeric."
+
+            target_col = new_column if new_column else f"{column}_binned"
+
+            if method == "quantile":
+                n_bins = bins if isinstance(bins, int) else 3
+                df[target_col] = pd.qcut(df[column], q=n_bins, labels=labels, duplicates="drop")
+            elif method == "uniform":
+                n_bins = bins if isinstance(bins, int) else 3
+                df[target_col] = pd.cut(df[column], bins=n_bins, labels=labels)
+            elif method == "custom":
+                if not isinstance(bins, list):
+                    return "Error: For method='custom', bins must be a list of edges (e.g. [0, 100, 1000])."
+                df[target_col] = pd.cut(df[column], bins=bins, labels=labels, include_lowest=True)
+            else:
+                return f"Error: Unknown method '{method}'. Use: quantile, uniform, custom."
+
+            store.set(name, df)
+            vc = df[target_col].value_counts().sort_index()
+            dist = ", ".join(f"{k}: {v}" for k, v in vc.items())
+            return f"Created binned column '{target_col}' in '{name}' ({method}).\nDistribution: {dist}"
+        except Exception as e:
+            return f"Error: {type(e).__name__} - {e}"

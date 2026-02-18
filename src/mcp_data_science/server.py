@@ -8,7 +8,7 @@ from mcp_data_science.state import DataStore
 from mcp_data_science.tools import (
     loading, inspection, cleaning, transformation, encoding,
     visualization, analysis, modeling, feature_selection, datetime_tools,
-    reporting,
+    reporting, statistical_tests, interpretation, clustering, dimensionality,
 )
 
 logging.basicConfig(
@@ -36,4 +36,8 @@ analysis.register_tools(mcp, store)
 modeling.register_tools(mcp, store)
 feature_selection.register_tools(mcp, store)
 datetime_tools.register_tools(mcp, store)
+statistical_tests.register_tools(mcp, store)
+interpretation.register_tools(mcp, store)
+clustering.register_tools(mcp, store)
+dimensionality.register_tools(mcp, store)
 reporting.register_tools(mcp, store)

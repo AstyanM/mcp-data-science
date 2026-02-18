@@ -24,6 +24,8 @@ Thumbs.db
 data/
 *.csv
 !examples/*.csv
+tests/plots/
+tests/reports/
 
 # Jupyter
 .ipynb_checkpoints/

@@ -274,3 +274,44 @@ def register_tools(mcp: FastMCP, store: DataStore) -> None:
             return f"Cleaned '{column}' in '{name}' (operations: {ops}). Sample: {sample}"
         except Exception as e:
             return f"Error: {type(e).__name__} - {e}"
+
+    @mcp.tool()
+    def polynomial_features(
+        columns: list[str],
+        degree: int = 2,
+        interaction_only: bool = False,
+        df_name: str = "",
+    ) -> str:
+        """Create polynomial and interaction features from numeric columns.
+        degree=2 creates x^2 and x1*x2 terms. interaction_only=True skips powers (x^2).
+        Use when linear models underfit: polynomial features capture non-linear relationships.
+        Example: polynomial_features(columns=["Revenue","Weight"], degree=2)"""
+        try:
+            from sklearn.preprocessing import PolynomialFeatures as PolyFeat
+
+            name = store.resolve_name(df_name)
+            df = store.get(name)
+            missing = [c for c in columns if c not in df.columns]
+            if missing:
+                return f"Error: Columns not found: {missing}. Available: {df.columns.tolist()}"
+
+            X = df[columns].fillna(0)
+            poly = PolyFeat(degree=degree, interaction_only=interaction_only, include_bias=False)
+            X_poly = poly.fit_transform(X)
+            feature_names = poly.get_feature_names_out(columns)
+
+            # Only add new columns (skip original columns)
+            new_cols = []
+            for i, fname in enumerate(feature_names):
+                if fname not in columns:
+                    clean_name = fname.replace(" ", "_")
+                    df[clean_name] = X_poly[:, i]
+                    new_cols.append(clean_name)
+
+            store.set(name, df)
+            return (
+                f"Created {len(new_cols)} polynomial features (degree={degree}) in '{name}'.\n"
+                f"New columns: {new_cols}"
+            )
+        except Exception as e:
+            return f"Error: {type(e).__name__} - {e}"

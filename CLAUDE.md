@@ -1,7 +1,7 @@
 # MCP Data Science Server
 
 ## Project Purpose
-MCP server (Model Context Protocol) that gives an LLM 65 tools for complete data science pipelines: load, inspect, clean, transform, encode, visualize, analyze datasets, train ML models, select features, and handle datetime operations.
+MCP server (Model Context Protocol) that gives an LLM 102 tools for complete data science pipelines: load, inspect, clean, transform, encode, visualize, analyze datasets, train ML models, select features, handle datetime operations, run statistical tests, interpret models, perform clustering, and reduce dimensionality.
 
 ## Architecture
 
@@ -9,20 +9,25 @@ MCP server (Model Context Protocol) that gives an LLM 65 tools for complete data
 src/mcp_data_science/
 ├── __init__.py              # main() entry point → mcp.run(transport="stdio")
 ├── __main__.py              # python -m support
-├── server.py                # FastMCP instance + registers all 10 tool modules
+├── server.py                # FastMCP instance + registers all 15 tool modules
 ├── state.py                 # DataStore: holds named DataFrames + trained ML models
 └── tools/
     ├── _plot_helpers.py     # fig_to_image() — matplotlib Agg → PNG → MCP Image
-    ├── loading.py           # 9 tools: load/save CSV, list/set/copy/merge dataframes, pivot, melt, concat
+    ├── loading.py           # 11 tools: load/save CSV/Excel/Parquet, list/set/copy/merge dataframes, pivot, melt, concat
     ├── inspection.py        # 9 tools: head, tail, info, stats, shape, quality_report, unique, profile, sample
-    ├── cleaning.py          # 8 tools: drop_duplicates, drop_columns, drop/fill_missing, filter, rename, clip, sort
-    ├── transformation.py    # 8 tools: create_column (eval), log_transform, normalize, mapping, dtype, replace, select_dtypes, string_clean
+    ├── cleaning.py          # 9 tools: drop_duplicates, drop_columns, drop/fill_missing, filter, rename, clip, sort, bin_column
+    ├── transformation.py    # 9 tools: create_column, log_transform, normalize, mapping, dtype, replace, select_dtypes, string_clean, polynomial_features
     ├── encoding.py          # 4 tools: one_hot, target, label, frequency encoding
-    ├── visualization.py     # 8 tools: histogram, bar, scatter, box, correlation_matrix, pairplot, missing_values, line
-    ├── analysis.py          # 6 tools: correlation, value_counts, outliers, group_aggregate, crosstab, add_row_index
-    ├── modeling.py          # 5 tools: train_test_split, train_model, predict, evaluate_model, list_models
+    ├── visualization.py     # 14 tools: histogram, bar, scatter, box, correlation_matrix, pairplot, missing_values, line, violin, qq, stacked_bar, heatmap, distribution_comparison, cumulative
+    ├── analysis.py          # 8 tools: correlation, value_counts, outliers, group_aggregate, crosstab, add_row_index, group_aggregate_multi, describe_by_group
+    ├── modeling.py          # 8 tools: train_test_split, train_model, predict, evaluate_model, list_models, cross_validate, compare_models, grid_search
     ├── feature_selection.py # 4 tools: correlation_filter, variance_filter, feature_importance, drop_low_importance
-    └── datetime_tools.py    # 4 tools: extract_datetime_parts, datetime_diff, datetime_filter, set_datetime_index
+    ├── datetime_tools.py    # 4 tools: extract_datetime_parts, datetime_diff, datetime_filter, set_datetime_index
+    ├── statistical_tests.py # 6 tools: ttest_independent, anova_test, chi_square_test, normality_test, mann_whitney_test, kruskal_wallis_test
+    ├── interpretation.py    # 7 tools: plot_feature_importance_model, plot_residuals, plot_confusion_matrix, plot_roc_curve, plot_precision_recall_curve, plot_learning_curve, permutation_importance
+    ├── clustering.py        # 5 tools: kmeans_cluster, dbscan_cluster, elbow_plot, silhouette_score, cluster_profile
+    ├── dimensionality.py    # 2 tools: pca_transform, tsne_plot
+    └── reporting.py         # 2 tools: save_report, save_report_html
 ```
 
 ## Key Patterns
@@ -46,7 +51,7 @@ mcp dev src/mcp_data_science/server.py  # Launch MCP Inspector for interactive t
 
 1. Run `mcp dev src/mcp_data_science/server.py` — opens web UI at http://localhost:6274
 2. In the Inspector, set Command=`python`, Arguments=`-m mcp_data_science`, then click Connect
-3. Go to "Tools" tab — all 65 tools are listed
+3. Go to "Tools" tab — all 102 tools are listed
 4. Call `load_csv` first with a CSV path, then call any other tool
 
 ## Rules
@@ -58,7 +63,7 @@ mcp dev src/mcp_data_science/server.py  # Launch MCP Inspector for interactive t
 - `create_column` uses `df.eval()` (safe pandas expressions), never Python `eval()`
 
 ## Dependencies
-mcp, pandas, numpy, matplotlib, seaborn, category-encoders, scikit-learn, Pillow
+mcp, pandas, numpy, matplotlib, seaborn, category-encoders, scikit-learn, Pillow, scipy, openpyxl (optional for Excel), pyarrow (optional for Parquet)
 
 ## Reference
 - PRD: `.taskmaster/docs/prd.txt` — original spec with 48 tool signatures and 5 implementation phases
