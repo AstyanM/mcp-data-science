@@ -15,6 +15,8 @@ def register_tools(mcp: FastMCP, store: DataStore) -> None:
             resolved_name = name if name else Path(file_path).stem
             df = pd.read_csv(file_path, sep=separator)
             store.add(resolved_name, df)
+            if not store._csv_dir:
+                store._csv_dir = str(Path(file_path).resolve().parent)
             dtype_summary = df.dtypes.value_counts().to_dict()
             dtype_str = ", ".join(f"{v} {k}" for k, v in dtype_summary.items())
             return (

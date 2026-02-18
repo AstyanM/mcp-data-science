@@ -123,3 +123,34 @@ class TestModelManagement:
         store.add_model("m1", {"type": "a"})
         store.remove_model("m1")
         assert "m1" not in store.list_model_names()
+
+
+class TestPlotStorage:
+    def test_save_and_get_plot(self, store):
+        png_bytes = b"\x89PNG\r\n\x1a\nfake_png_data"
+        store.save_plot("histogram_Revenue", png_bytes)
+        result = store.get_plot("histogram_Revenue")
+        assert result == png_bytes
+
+    def test_get_plot_nonexistent_raises(self, store):
+        with pytest.raises(KeyError, match="No plot named"):
+            store.get_plot("nonexistent")
+
+    def test_list_plot_names(self, store):
+        store.save_plot("plot_a", b"a")
+        store.save_plot("plot_b", b"b")
+        assert set(store.list_plot_names()) == {"plot_a", "plot_b"}
+
+    def test_list_plot_names_empty(self, store):
+        assert store.list_plot_names() == []
+
+    def test_overwrite_plot(self, store):
+        store.save_plot("p1", b"old")
+        store.save_plot("p1", b"new")
+        assert store.get_plot("p1") == b"new"
+
+    def test_csv_dir_default_empty(self, store):
+        assert store._csv_dir == ""
+
+    def test_plots_default_empty(self, store):
+        assert store._plots == {}

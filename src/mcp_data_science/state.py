@@ -12,6 +12,8 @@ class DataStore:
         self._frames: dict[str, pd.DataFrame] = {}
         self._current: str = ""
         self._models: dict[str, dict] = {}
+        self._plots: dict[str, bytes] = {}
+        self._csv_dir: str = ""
 
     @property
     def current_name(self) -> str:
@@ -80,3 +82,19 @@ class DataStore:
     def remove_model(self, name: str) -> None:
         if name in self._models:
             del self._models[name]
+
+    # ── Plot storage ────────────────────────────────────────────────
+
+    def save_plot(self, name: str, data: bytes) -> None:
+        """Store plot PNG bytes by name for later report inclusion."""
+        self._plots[name] = data
+
+    def get_plot(self, name: str) -> bytes:
+        """Retrieve stored plot PNG bytes by name."""
+        if name not in self._plots:
+            raise KeyError(f"No plot named '{name}'. Available: {list(self._plots.keys())}")
+        return self._plots[name]
+
+    def list_plot_names(self) -> list[str]:
+        """List all stored plot names."""
+        return list(self._plots.keys())

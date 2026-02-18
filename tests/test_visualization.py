@@ -45,6 +45,19 @@ class TestPlotHistogram:
         _, call = env
         _assert_image(call("plot_histogram", column="Revenue", kde=False))
 
+    def test_stores_plot(self, env):
+        store, call = env
+        call("plot_histogram", column="Revenue")
+        assert "histogram_Revenue" in store.list_plot_names()
+        assert len(store.get_plot("histogram_Revenue")) > 100
+
+    def test_save_path(self, env, tmp_path):
+        store, call = env
+        out = tmp_path / "plots" / "hist.png"
+        call("plot_histogram", column="Revenue", save_path=str(out))
+        assert out.exists()
+        assert len(out.read_bytes()) > 100
+
 
 class TestPlotBar:
     def test_vertical(self, env):
@@ -54,6 +67,11 @@ class TestPlotBar:
     def test_horizontal(self, env):
         _, call = env
         _assert_image(call("plot_bar", column="Category", orientation="horizontal"))
+
+    def test_stores_plot(self, env):
+        store, call = env
+        call("plot_bar", column="Category")
+        assert "bar_Category" in store.list_plot_names()
 
 
 class TestPlotScatter:
@@ -65,6 +83,11 @@ class TestPlotScatter:
         _, call = env
         _assert_image(call("plot_scatter", x="Age", y="Revenue", hue="Category"))
 
+    def test_stores_plot(self, env):
+        store, call = env
+        call("plot_scatter", x="Age", y="Revenue")
+        assert "scatter_Age_vs_Revenue" in store.list_plot_names()
+
 
 class TestPlotBox:
     def test_simple(self, env):
@@ -74,6 +97,16 @@ class TestPlotBox:
     def test_with_by(self, env):
         _, call = env
         _assert_image(call("plot_box", column="Revenue", by="Category"))
+
+    def test_stores_plot_simple(self, env):
+        store, call = env
+        call("plot_box", column="Revenue")
+        assert "box_Revenue" in store.list_plot_names()
+
+    def test_stores_plot_with_by(self, env):
+        store, call = env
+        call("plot_box", column="Revenue", by="Category")
+        assert "box_Revenue_by_Category" in store.list_plot_names()
 
 
 class TestPlotCorrelationMatrix:
@@ -86,6 +119,11 @@ class TestPlotCorrelationMatrix:
         _assert_image(call("plot_correlation_matrix",
                             columns=["Age", "Revenue", "Score"]))
 
+    def test_stores_plot(self, env):
+        store, call = env
+        call("plot_correlation_matrix")
+        assert "correlation_matrix" in store.list_plot_names()
+
 
 class TestPlotPairplot:
     def test_happy(self, env):
@@ -97,11 +135,21 @@ class TestPlotPairplot:
         _assert_image(call("plot_pairplot",
                             columns=["Age", "Revenue", "Score"], hue="Category"))
 
+    def test_stores_plot(self, env):
+        store, call = env
+        call("plot_pairplot", columns=["Age", "Revenue", "Score"])
+        assert "pairplot" in store.list_plot_names()
+
 
 class TestPlotMissingValues:
     def test_happy(self, env):
         _, call = env
         _assert_image(call("plot_missing_values"))
+
+    def test_stores_plot(self, env):
+        store, call = env
+        call("plot_missing_values")
+        assert "missing_values" in store.list_plot_names()
 
 
 class TestPlotLine:
@@ -112,3 +160,8 @@ class TestPlotLine:
     def test_multi_y(self, env):
         _, call = env
         _assert_image(call("plot_line", x="Age", y=["Revenue", "Score"]))
+
+    def test_stores_plot(self, env):
+        store, call = env
+        call("plot_line", x="Age", y="Revenue")
+        assert "line_Age_vs_Revenue" in store.list_plot_names()

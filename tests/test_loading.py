@@ -33,6 +33,21 @@ class TestLoadCsv:
         result = call("load_csv", file_path="/nonexistent/file.csv")
         assert "Error" in str(result) or "error" in str(result).lower()
 
+    def test_csv_dir_set(self, env):
+        store, call = env
+        call("load_csv", file_path=SAMPLE_CSV)
+        assert store._csv_dir != ""
+        assert "tests" in store._csv_dir or "test" in store._csv_dir.lower()
+
+    def test_csv_dir_not_overwritten(self, env, tmp_path):
+        store, call = env
+        call("load_csv", file_path=SAMPLE_CSV)
+        first_dir = store._csv_dir
+        csv2 = tmp_path / "other.csv"
+        csv2.write_text("a,b\n1,2\n", encoding="utf-8")
+        call("load_csv", file_path=str(csv2), name="other")
+        assert store._csv_dir == first_dir
+
     def test_separator(self, env, tmp_path):
         store, call = env
         csv = tmp_path / "semi.csv"

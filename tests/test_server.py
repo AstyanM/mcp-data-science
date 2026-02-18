@@ -16,7 +16,7 @@ def test_instructions_loaded():
 def test_tool_count():
     from mcp_data_science.server import mcp
     tools = asyncio.run(mcp.list_tools())
-    assert len(tools) == 65
+    assert len(tools) == 66
 
 
 def test_expected_tools_registered():
@@ -28,6 +28,7 @@ def test_expected_tools_registered():
         "drop_duplicates", "create_column", "one_hot_encode",
         "plot_histogram", "get_correlation", "train_model",
         "correlation_filter", "extract_datetime_parts",
+        "save_report",
     }
     assert expected.issubset(names)
 

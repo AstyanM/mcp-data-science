@@ -4,7 +4,7 @@ import seaborn as sns
 from mcp.server.fastmcp import FastMCP, Image
 
 from mcp_data_science.state import DataStore
-from mcp_data_science.tools._plot_helpers import fig_to_image
+from mcp_data_science.tools._plot_helpers import fig_to_image, fig_to_image_and_store
 
 
 def register_tools(mcp: FastMCP, store: DataStore) -> None:
@@ -15,6 +15,7 @@ def register_tools(mcp: FastMCP, store: DataStore) -> None:
         bins: int = 30,
         kde: bool = True,
         log_scale: bool = False,
+        save_path: str = "",
         df_name: str = "",
     ) -> Image:
         """Plot a histogram for a numeric column with optional KDE overlay and log-scaled x-axis.
@@ -33,7 +34,7 @@ def register_tools(mcp: FastMCP, store: DataStore) -> None:
             ax.set_title(f"Histogram of {column}")
             ax.set_xlabel(column)
             ax.set_ylabel("Count")
-            return fig_to_image(fig)
+            return fig_to_image_and_store(fig, store, f"histogram_{column}", save_path)
         except Exception as e:
             fig, ax = plt.subplots()
             ax.text(0.5, 0.5, f"Error: {e}", ha="center", va="center", transform=ax.transAxes)
@@ -44,6 +45,7 @@ def register_tools(mcp: FastMCP, store: DataStore) -> None:
         column: str,
         top_n: int = 10,
         orientation: str = "vertical",
+        save_path: str = "",
         df_name: str = "",
     ) -> Image:
         """Bar plot of value counts (top N categories). Vertical or horizontal.
@@ -69,7 +71,7 @@ def register_tools(mcp: FastMCP, store: DataStore) -> None:
 
             ax.set_title(f"Top {top_n} values of {column}")
             fig.tight_layout()
-            return fig_to_image(fig)
+            return fig_to_image_and_store(fig, store, f"bar_{column}", save_path)
         except Exception as e:
             fig, ax = plt.subplots()
             ax.text(0.5, 0.5, f"Error: {e}", ha="center", va="center", transform=ax.transAxes)
@@ -80,6 +82,7 @@ def register_tools(mcp: FastMCP, store: DataStore) -> None:
         x: str,
         y: str,
         hue: str = "",
+        save_path: str = "",
         df_name: str = "",
     ) -> Image:
         """Scatter plot between two numeric columns. Optional color grouping by hue column.
@@ -96,7 +99,7 @@ def register_tools(mcp: FastMCP, store: DataStore) -> None:
             sns.scatterplot(data=df, x=x, y=y, hue=hue_col, alpha=0.6, ax=ax)
             ax.set_title(f"{y} vs {x}")
             fig.tight_layout()
-            return fig_to_image(fig)
+            return fig_to_image_and_store(fig, store, f"scatter_{x}_vs_{y}", save_path)
         except Exception as e:
             fig, ax = plt.subplots()
             ax.text(0.5, 0.5, f"Error: {e}", ha="center", va="center", transform=ax.transAxes)
@@ -106,6 +109,7 @@ def register_tools(mcp: FastMCP, store: DataStore) -> None:
     def plot_box(
         column: str,
         by: str = "",
+        save_path: str = "",
         df_name: str = "",
     ) -> Image:
         """Box plot for outlier visualization. Optional grouping by a categorical column.
@@ -126,7 +130,8 @@ def register_tools(mcp: FastMCP, store: DataStore) -> None:
                 ax.set_title(f"Box plot of {column}")
 
             fig.tight_layout()
-            return fig_to_image(fig)
+            plot_name = f"box_{column}_by_{by}" if by else f"box_{column}"
+            return fig_to_image_and_store(fig, store, plot_name, save_path)
         except Exception as e:
             fig, ax = plt.subplots()
             ax.text(0.5, 0.5, f"Error: {e}", ha="center", va="center", transform=ax.transAxes)
@@ -136,6 +141,7 @@ def register_tools(mcp: FastMCP, store: DataStore) -> None:
     def plot_correlation_matrix(
         columns: list[str] | None = None,
         method: str = "pearson",
+        save_path: str = "",
         df_name: str = "",
     ) -> Image:
         """Correlation heatmap with lower triangle mask and annotations.
@@ -173,7 +179,7 @@ def register_tools(mcp: FastMCP, store: DataStore) -> None:
             )
             ax.set_title(f"Correlation Matrix ({method})")
             fig.tight_layout()
-            return fig_to_image(fig)
+            return fig_to_image_and_store(fig, store, "correlation_matrix", save_path)
         except Exception as e:
             fig, ax = plt.subplots()
             ax.text(0.5, 0.5, f"Error: {e}", ha="center", va="center", transform=ax.transAxes)
@@ -183,6 +189,7 @@ def register_tools(mcp: FastMCP, store: DataStore) -> None:
     def plot_pairplot(
         columns: list[str],
         hue: str = "",
+        save_path: str = "",
         df_name: str = "",
     ) -> Image:
         """Seaborn pairplot for up to 6 columns. Shows distributions on diagonal and
@@ -203,14 +210,14 @@ def register_tools(mcp: FastMCP, store: DataStore) -> None:
 
             g = sns.pairplot(df[plot_cols].dropna(), hue=hue_col, diag_kind="kde")
             g.figure.suptitle(f"Pair Plot ({len(cols)} columns)", y=1.02)
-            return fig_to_image(g.figure)
+            return fig_to_image_and_store(g.figure, store, "pairplot", save_path)
         except Exception as e:
             fig, ax = plt.subplots()
             ax.text(0.5, 0.5, f"Error: {e}", ha="center", va="center", transform=ax.transAxes)
             return fig_to_image(fig)
 
     @mcp.tool()
-    def plot_missing_values(df_name: str = "") -> Image:
+    def plot_missing_values(save_path: str = "", df_name: str = "") -> Image:
         """Heatmap showing missing value patterns across all columns.
         White = present, colored = missing. Helps identify systematic missing data.
         Example: plot_missing_values()"""
@@ -230,7 +237,7 @@ def register_tools(mcp: FastMCP, store: DataStore) -> None:
             ax.set_xlabel("Columns")
             ax.set_ylabel("Rows")
             fig.tight_layout()
-            return fig_to_image(fig)
+            return fig_to_image_and_store(fig, store, "missing_values", save_path)
         except Exception as e:
             fig, ax = plt.subplots()
             ax.text(0.5, 0.5, f"Error: {e}", ha="center", va="center", transform=ax.transAxes)
@@ -241,6 +248,7 @@ def register_tools(mcp: FastMCP, store: DataStore) -> None:
         x: str,
         y: str | list[str],
         hue: str = "",
+        save_path: str = "",
         df_name: str = "",
     ) -> Image:
         """Line plot. Supports multiple y columns overlaid. Essential for time-series and trends.
@@ -272,7 +280,8 @@ def register_tools(mcp: FastMCP, store: DataStore) -> None:
             ax.set_title(f"Line Plot: {', '.join(y_cols)} vs {x}")
             ax.tick_params(axis="x", rotation=45)
             fig.tight_layout()
-            return fig_to_image(fig)
+            y_label = "_".join(y_cols) if len(y_cols) > 1 else y_cols[0]
+            return fig_to_image_and_store(fig, store, f"line_{x}_vs_{y_label}", save_path)
         except Exception as e:
             fig, ax = plt.subplots()
             ax.text(0.5, 0.5, f"Error: {e}", ha="center", va="center", transform=ax.transAxes)
