@@ -31,3 +31,4 @@ data/
 # Claude
 .taskmaster/
 .claude/
+.serena/
