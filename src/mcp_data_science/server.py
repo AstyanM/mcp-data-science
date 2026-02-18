@@ -1,5 +1,6 @@
 import logging
 import sys
+from pathlib import Path
 
 from mcp.server.fastmcp import FastMCP
 
@@ -15,12 +16,11 @@ logging.basicConfig(
     stream=sys.stderr,
 )
 
+_instructions = (Path(__file__).parent / "instructions.md").read_text(encoding="utf-8")
+
 mcp = FastMCP(
     "mcp-data-science",
-    instructions=(
-        "Data science server: load, clean, transform, encode, analyze, visualize CSV datasets, "
-        "train ML models, select features, and handle datetime operations. 65 tools for complete DS pipelines."
-    ),
+    instructions=_instructions,
 )
 
 store = DataStore()
