@@ -235,3 +235,45 @@ def register_tools(mcp: FastMCP, store: DataStore) -> None:
             fig, ax = plt.subplots()
             ax.text(0.5, 0.5, f"Error: {e}", ha="center", va="center", transform=ax.transAxes)
             return fig_to_image(fig)
+
+    @mcp.tool()
+    def plot_line(
+        x: str,
+        y: str | list[str],
+        hue: str = "",
+        df_name: str = "",
+    ) -> Image:
+        """Line plot. Supports multiple y columns overlaid. Essential for time-series and trends.
+        Example: plot_line(x="date", y="Revenue")
+        Example: plot_line(x="month", y=["Revenue", "Cost"], hue="Category")"""
+        try:
+            name = store.resolve_name(df_name)
+            df = store.get(name)
+            if x not in df.columns:
+                raise ValueError(f"Column '{x}' not found. Available: {df.columns.tolist()}")
+
+            y_cols = [y] if isinstance(y, str) else y
+            for col in y_cols:
+                if col not in df.columns:
+                    raise ValueError(f"Column '{col}' not found. Available: {df.columns.tolist()}")
+
+            fig, ax = plt.subplots(figsize=(12, 6))
+            hue_col = hue if hue and hue in df.columns else None
+
+            if len(y_cols) == 1 and hue_col:
+                sns.lineplot(data=df, x=x, y=y_cols[0], hue=hue_col, ax=ax)
+            elif len(y_cols) == 1:
+                sns.lineplot(data=df, x=x, y=y_cols[0], ax=ax)
+            else:
+                for col in y_cols:
+                    sns.lineplot(data=df, x=x, y=col, label=col, ax=ax)
+                ax.legend()
+
+            ax.set_title(f"Line Plot: {', '.join(y_cols)} vs {x}")
+            ax.tick_params(axis="x", rotation=45)
+            fig.tight_layout()
+            return fig_to_image(fig)
+        except Exception as e:
+            fig, ax = plt.subplots()
+            ax.text(0.5, 0.5, f"Error: {e}", ha="center", va="center", transform=ax.transAxes)
+            return fig_to_image(fig)

@@ -94,3 +94,82 @@ def register_tools(mcp: FastMCP, store: DataStore) -> None:
             )
         except Exception as e:
             return f"Error merging: {type(e).__name__} - {e}"
+
+    @mcp.tool()
+    def pivot_table(
+        index: list[str],
+        columns: str,
+        values: str,
+        agg_func: str = "mean",
+        result_name: str = "",
+        df_name: str = "",
+    ) -> str:
+        """Create a pivot table. Stores result as a new dataframe.
+        Example: pivot_table(index=["City"], columns="Category", values="Revenue", agg_func="mean")"""
+        try:
+            name = store.resolve_name(df_name)
+            df = store.get(name)
+            for col in index + [columns, values]:
+                if col not in df.columns:
+                    return f"Error: Column '{col}' not found. Available: {df.columns.tolist()}"
+
+            pivot = pd.pivot_table(df, index=index, columns=columns, values=values, aggfunc=agg_func)
+            pivot = pivot.reset_index()
+            # Flatten MultiIndex columns
+            pivot.columns = [str(c) if not isinstance(c, tuple) else "_".join(str(x) for x in c) for c in pivot.columns]
+
+            res_name = result_name if result_name else f"{name}_pivot"
+            store.add(res_name, pivot, set_current=False)
+            return (
+                f"Pivot table created as '{res_name}': {pivot.shape[0]} rows, {pivot.shape[1]} columns.\n"
+                f"Preview:\n{pivot.head(10).to_string()}"
+            )
+        except Exception as e:
+            return f"Error: {type(e).__name__} - {e}"
+
+    @mcp.tool()
+    def melt_dataframe(
+        id_vars: list[str],
+        value_vars: list[str] | None = None,
+        var_name: str = "variable",
+        value_name: str = "value",
+        df_name: str = "",
+    ) -> str:
+        """Unpivot (wide to long format). id_vars are columns to keep, value_vars are columns to melt.
+        Example: melt_dataframe(id_vars=["Name","City"], value_vars=["Score","Revenue"])"""
+        try:
+            name = store.resolve_name(df_name)
+            df = store.get(name)
+            val_vars = value_vars if value_vars else None
+            before_shape = df.shape
+            df = pd.melt(df, id_vars=id_vars, value_vars=val_vars, var_name=var_name, value_name=value_name)
+            store.set(name, df)
+            return (
+                f"Melted '{name}': {before_shape[0]}x{before_shape[1]} -> {df.shape[0]}x{df.shape[1]}.\n"
+                f"Columns: {df.columns.tolist()}"
+            )
+        except Exception as e:
+            return f"Error: {type(e).__name__} - {e}"
+
+    @mcp.tool()
+    def concat_dataframes(
+        names: list[str],
+        axis: int = 0,
+        result_name: str = "",
+    ) -> str:
+        """Concatenate multiple dataframes along rows (axis=0) or columns (axis=1).
+        Example: concat_dataframes(names=["data_train", "data_test"], axis=0)"""
+        try:
+            dfs = []
+            for n in names:
+                dfs.append(store.get(n))
+
+            res_name = result_name if result_name else "_".join(names) + "_concat"
+            concatenated = pd.concat(dfs, axis=axis, ignore_index=True)
+            store.add(res_name, concatenated, set_current=False)
+            return (
+                f"Concatenated {len(names)} dataframes (axis={axis}) as '{res_name}'.\n"
+                f"Result: {concatenated.shape[0]} rows, {concatenated.shape[1]} columns."
+            )
+        except Exception as e:
+            return f"Error: {type(e).__name__} - {e}"

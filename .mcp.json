@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "mcp-data-science": {
+      "command": "python",
+      "args": ["-m", "mcp_data_science"],
+      "cwd": "D:\\Astyan\\mcp-data-science",
+      "env": {
+        "PYTHONPATH": "D:\\Astyan\\mcp-data-science\\src"
+      }
+    }
+  }
+}

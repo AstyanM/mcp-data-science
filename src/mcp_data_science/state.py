@@ -5,11 +5,13 @@ logger = logging.getLogger(__name__)
 
 
 class DataStore:
-    """Holds named DataFrames in memory with a 'current' active DataFrame."""
+    """Holds named DataFrames in memory with a 'current' active DataFrame.
+    Also stores trained ML models."""
 
     def __init__(self):
         self._frames: dict[str, pd.DataFrame] = {}
         self._current: str = ""
+        self._models: dict[str, dict] = {}
 
     @property
     def current_name(self) -> str:
@@ -60,3 +62,21 @@ class DataStore:
             raise KeyError(f"No dataframe named '{source}'. Available: {list(self._frames.keys())}")
         self._frames[target] = self._frames[source].copy()
         logger.info("Copied '%s' -> '%s'", source, target)
+
+    # ── Model storage ───────────────────────────────────────────────
+
+    def add_model(self, name: str, model_info: dict) -> None:
+        self._models[name] = model_info
+        logger.info("Stored model '%s' (type=%s)", name, model_info.get("type", "unknown"))
+
+    def get_model(self, name: str) -> dict:
+        if name not in self._models:
+            raise KeyError(f"No model named '{name}'. Available: {list(self._models.keys())}")
+        return self._models[name]
+
+    def list_model_names(self) -> list[str]:
+        return list(self._models.keys())
+
+    def remove_model(self, name: str) -> None:
+        if name in self._models:
+            del self._models[name]
